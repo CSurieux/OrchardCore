@@ -5,7 +5,9 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using OrchardCore.Apis.GraphQL.Services;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
@@ -14,11 +16,14 @@ namespace OrchardCore.Apis.GraphQL
 {
     public class Startup : StartupBase
     {
-        private IConfiguration _configuration;
+        private readonly IShellConfiguration _configuration;
+        private readonly IHostingEnvironment _hostingEnvironment;
 
-        public Startup(IConfiguration configuration)
+        public Startup(IShellConfiguration configuration,
+            IHostingEnvironment hostingEnvironment)
         {
             _configuration = configuration;
+            _hostingEnvironment = hostingEnvironment;
         }
 
         public override void ConfigureServices(IServiceCollection services)
@@ -35,11 +40,9 @@ namespace OrchardCore.Apis.GraphQL
 
         public override void Configure(IApplicationBuilder app, IRouteBuilder routes, IServiceProvider serviceProvider)
         {
-#if DEBUG
-            var exposeExceptions = _configuration.GetValue<bool>($"Modules:OrchardCore.Apis.GraphQL:{nameof(GraphQLSettings.ExposeExceptions)}", true);
-#else
-            var exposeExceptions = _configuration.GetValue<bool>($"Modules:OrchardCore.Apis.GraphQL:{nameof(GraphQLSettings.ExposeExceptions)}", false);
-#endif
+            var exposeExceptions = _configuration.GetValue(
+                $"OrchardCore.Apis.GraphQL:{nameof(GraphQLSettings.ExposeExceptions)}",
+                _hostingEnvironment.IsDevelopment());
 
             app.UseMiddleware<GraphQLMiddleware>(new GraphQLSettings
             {
